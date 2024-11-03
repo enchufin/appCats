@@ -10,6 +10,9 @@ html, * {
     }
     
     main {
+      /* El contenedor a columna siempre para dejar
+       el título sobre deescripción e imagen */
+       
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -25,6 +28,9 @@ html, * {
     }
     
     section {
+      /* El section en fila por defecto de ancho ajustable 
+      hasta un max de 800px. Items centrados y los estilos de la card*/
+
       display: flex;
       justify-content: space-between;
       align-items: center;
