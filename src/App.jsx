@@ -1,33 +1,20 @@
 import { useState, useEffect } from 'react'
+import { getRandomFact } from './services/facts.js'
 import './styles.css'
-const CAT_ENDPOINT_RANDOM_FACT = 'https://catfact.ninja/fact'
-// const CAT_ENDPOINT_IMAGE_URL = `https://cataas.com/cat/says/${firstWords}?fontSize=24&fontColor=white&json=true`
+
 const CAT_PREFIX_IMAGE_URL = 'https://cataas.com/cat/'
 
-export default function App () {
-  const [fact, setFact] = useState()
-  const [imageUrl, setImageUrl] = useState()
+function useCatImage ({ fact }) {
+  /* const [imageUrl, setImageUrl] = useState()
   const [imageTag, setImageTag] = useState()
-  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
-
-  const getRandomFact = async () => {
-    setIsLoading(true)
-    setError(null)
-    try {
-      const res = await fetch(CAT_ENDPOINT_RANDOM_FACT)
-      const data = await res.json()
-      setFact(data.fact)
-    } catch (error) {
-      console.error('Error fetching cat fact:', error)
-      setError('Ha fallado el fetch al dato. Please try again.')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  // recogemos el fact al cargar imagen
-  useEffect(() => { getRandomFact() }, [])
+  */
+  const [catImage, setCatImage] = useState({
+    imageUrl: '',
+    imageTag: '',
+    imageError: null,
+    imageLoading: true
+  })
 
   // cada vez que cambia el fact recogemos una imagen
   useEffect(() => {
@@ -42,18 +29,59 @@ export default function App () {
       })
       .then(response => {
         const idImage = response._id
-        setImageTag(response.tags)
-        setImageUrl(`${idImage}/says/${firstWords}?fontSize=30&fontColor=white`)
+        setCatImage({
+          imageTag: response.tags,
+          imageUrl: `${idImage}/says/${firstWords}?fontSize=30&fontColor=white`,
+          imageError: null,
+          imageLoading: false
+        })
       })
       .catch(error => {
         console.error('Error fuente de gatitos:', error)
-        setError('Error al cargar la foto. Please try again.')
+        setCatImage(prevState => ({
+          ...prevState,
+          imageError: 'Error al cargar la foto. Please try again.',
+          imageLoading: false
+        }))
       })
   }, [fact])
 
+  // devolvemos el objeto catImage y el posible error
+  return { catImage, error: catImage.imageError }
+}
+
+export default function App () {
+  const [fact, setFact] = useState()
+  const [factError, setFactError] = useState(null)
+  const { catImage, error: imageError } = useCatImage({ fact })
+  const [isLoading, setIsLoading] = useState(false)
+
+  // recogemos el fact al cargar imagen
+  useEffect(() => {
+    setIsLoading(true)
+    setFactError(null)
+    getRandomFact().then(newFact => {
+      setFact(newFact)
+      setIsLoading(false)
+    })
+  }, [])
+
   // maneja el click con una constante
   const handleClick = () => {
+    setIsLoading(true)
+    setFactError(null)
     getRandomFact()
+      .then(newFact => {
+        // si se recibe un fact nuevo
+        if (!newFact) throw new Error('No se pudo obtener un nuevo dato curioso')
+        setFact(newFact)
+        setIsLoading(false)
+      })
+      .catch(error => {
+        console.error('Error:', error)
+        setFactError('Error al cargar el dato curioso')
+        setIsLoading(false)
+      })
   }
 
   return (
@@ -65,20 +93,20 @@ export default function App () {
           onClick={handleClick}
           /* previene  múltiples solicitudes y
           deshabilita el botón mientras se carga */
-          disabled={isLoading}
+          disabled={isLoading || catImage.imageLoading}
         >
-          {isLoading ? 'Cargando...' : 'Obtener otra curiosidad'}
+          {isLoading || catImage.imageLoading ? 'Cargando...' : 'Obtener otra curiosidad'}
         </button>
         {/* {error && <p className='mensaje-error'>{error}</p>} */}
         <div
-          className={`mensaje-error ${error ? '' : 'oculto'}`}
+          className={`mensaje-error ${factError || imageError ? '' : 'oculto'}`}
           role='alert'
         >
-          {error}
+          {factError || imageError}
         </div>
         <article>
           {fact && <p>{fact}</p>}
-          {imageUrl && <img src={`${CAT_PREFIX_IMAGE_URL}${imageUrl}`} alt={`imagen random de gatitos con los tags: ${imageTag}`} />}
+          {catImage.imageUrl && <img src={`${CAT_PREFIX_IMAGE_URL}${catImage.imageUrl}`} alt={`imagen random de gatitos con los tags: ${catImage.imageTag}`} />}
         </article>
       </section>
     </main>
